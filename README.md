@@ -82,26 +82,3 @@ Muốn Penny chạy liên tục và có link riêng để chia sẻ / dùng mọ
 3. Chạy `./start.sh`, mở cổng `7861` — hoặc đặt **Nginx reverse proxy + HTTPS** để có `https://tênban.com`.
 
 > 💡 Mình xài [Hostinger](https://hostinger.com/PENNYDEAL10) cho cả VPS + domain — mã `PENNYDEAL10` giảm thêm.
-
-## 7. Chèn link affiliate (kiếm tiền)
-
-Video render là file MP4 (người xem không click trực tiếp), nên affiliate hoạt động thế này —
-
-**Cần chuẩn bị:**
-1. **Tài khoản chương trình affiliate** của công cụ bạn nhắc trong video → nhận **link tracking** riêng.
-2. **Link rút gọn / tên miền thương hiệu** (Bitly, Dub.co, hoặc `go.tênban.com`) để hiện link ngắn dễ đọc trên màn hình.
-3. (tuỳ chọn) **QR code** cho link đó.
-
-**Cách chèn:**
-- **Trong video:** thêm 1 câu CTA cuối → ở Storyboard chọn template **Slide** / **Tối giản**, điền link ngắn (vd `go.penny.vn/notebooklm`). Có thể **✂ Tách** thêm 1 beat CTA ở cuối.
-- **Mô tả bài đăng** (YouTube/TikTok/Facebook): dán link affiliate đầy đủ — đây là nơi click chính.
-- **Ghim comment / bio.**
-
-> Penny Studio hiện chưa tự chèn link affiliate. Có thể thêm **template CTA (ô nhập link + QR)** vào Storyboard nếu cần.
-
----
-
-## Ghi chú
-- Recut render per-frame qua Chromium (GSAP) → chất lượng cao, mất vài phút. Máy khoẻ → nhanh hơn.
-- Không commit `.env` hay file media (đã có trong `.gitignore`).
-- License: MIT.
