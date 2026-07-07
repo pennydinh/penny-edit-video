@@ -7,7 +7,7 @@ from pathlib import Path
 from flask import Flask, request, jsonify, send_file, Response
 
 app = Flask(__name__)
-app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB max upload
+app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024 * 1024  # 2GB max upload
 
 def _load_kyma_env():
     candidates = [Path(".env"), Path.home() / ".config/kyma-dub/env", Path.home() / "kyma-api/.env"]
@@ -37,7 +37,7 @@ _VOICE_IDS = {
 }
 
 
-def run_job(job_id: str, input_path: str, to_lang: str, voice: str, model: str):
+def run_job(job_id: str, input_path: str, to_lang: str, voice: str, model: str, dual_sub: bool = False):
     with JOBS_LOCK:
         JOBS[job_id] = {"status": "running", "log": [], "output": None, "progress": 0, "filename": Path(input_path).name}
 
@@ -65,6 +65,7 @@ def run_job(job_id: str, input_path: str, to_lang: str, voice: str, model: str):
         "allow_voice_fallback": True,
         "burn": True,          # always burn captions
         "srt": True,           # also save .srt
+        "dual_sub": dual_sub,  # EN + original sub
         "bilingual": False,
         "keep_temp": False,
         "orig_vol": 0.08,      # keep original voice at 8%
@@ -313,6 +314,13 @@ HTML = r"""<!DOCTYPE html>
       </div>
     </div>
 
+    <div class="card" style="padding: 14px 18px; display:flex; align-items:center; gap:10px">
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; color:var(--gray-700)">
+        <input type="checkbox" id="dual-sub" style="width:16px;height:16px;accent-color:var(--blue)">
+        Show original subtitle (Vietnamese) below English caption
+      </label>
+    </div>
+
     <button class="btn-primary" type="submit" id="dub-btn">Start Dubbing</button>
   </form>
 
@@ -378,6 +386,7 @@ document.getElementById('dub-form').addEventListener('submit', async function(e)
   const toLang = document.getElementById('to-lang').value;
   const voice = document.getElementById('voice').value;
   const model = document.getElementById('model').value;
+  const dualSub = document.getElementById('dual-sub').checked ? '1' : '0';
 
   for (const file of selectedFiles) {
     const fd = new FormData();
@@ -385,6 +394,7 @@ document.getElementById('dub-form').addEventListener('submit', async function(e)
     fd.append('to', toLang);
     fd.append('voice', voice);
     fd.append('model', model);
+    fd.append('dual_sub', dualSub);
 
     try {
       const r = await fetch('/api/dub', { method: 'POST', body: fd });
@@ -491,10 +501,11 @@ def start_dub():
     to_lang = request.form.get("to", "en")
     voice   = request.form.get("voice", "charlie")
     model   = request.form.get("model", "")
+    dual_sub = request.form.get("dual_sub") == "1"
     job_id = uuid.uuid4().hex[:12]
     in_path = UPLOAD_DIR / f"{job_id}_input{Path(file.filename).suffix or '.mp4'}"
     file.save(str(in_path))
-    t = threading.Thread(target=run_job, args=(job_id, str(in_path), to_lang, voice, model), daemon=True)
+    t = threading.Thread(target=run_job, args=(job_id, str(in_path), to_lang, voice, model, dual_sub), daemon=True)
     t.start()
     return jsonify({"job_id": job_id})
 

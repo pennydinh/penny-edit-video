@@ -1,154 +1,107 @@
-# kyma-dub
+# Penny Studio 🎬
 
-[![npm: @sonpiaz/kyma-dub-mcp](https://img.shields.io/npm/v/@sonpiaz/kyma-dub-mcp?label=mcp%20server&color=cb3837&logo=npm)](https://www.npmjs.com/package/@sonpiaz/kyma-dub-mcp) [![license: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+**Bộ công cụ video AI chạy local — 2 phiên bản trong một app:**
 
-**Dub any video into another language with a natural, time-aligned AI voiceover — one command, one [Kyma](https://kymaapi.com) key.**
+| | Làm gì | Dùng khi |
+|---|---|---|
+| 🎤 **Penny Dub** | Dịch & lồng tiếng video sang ngôn ngữ khác bằng giọng AI tự nhiên, khớp thời gian gốc. Có voice-clone + phụ đề. | Muốn video nói ngôn ngữ khác |
+| 🎬 **Penny Recut** | Giữ nguyên tiếng gốc, AI **tự thiết kế minh hoạ** (khái niệm, sơ đồ, con số, liệt kê…) theo **từng câu nói**. Duyệt storyboard rồi render. | Muốn "đóng gói" video talking-head cho đẹp, chuyên nghiệp |
 
-kyma-dub composes `ffmpeg` + a Whisper-class ASR + an LLM + a natural text-to-speech voice into a single command that takes a video speaking one language and hands you back the same video speaking another. The new voice lands where the original speaker was — it tracks the picture instead of drifting — and it never puts words in their mouth: when the audio is unclear, it stays generic rather than inventing a name, place, or fact that was never said.
+Cả hai chạy trên cùng một web app, cùng một cửa sổ trình duyệt.
 
-```bash
-kyma-dub talk.mov --from vi --voice charlie
-# -> talk [EN dub].mp4
-```
+---
 
-Any source language Whisper can hear, any target language you ask for. Works on `mp4`, `mov`, `mkv`, `webm` — anything ffmpeg reads.
+## 1. Cài đặt
 
-## What you can make
-
-One command in, a finished artifact out:
-
-| Run | Get back |
-|---|---|
-| `kyma-dub talk.mov` | the same video, now speaking English, synced to the original timing |
-| `kyma-dub talk.mov --voice will` | a different voice — browse them with `kyma-dub voices` |
-| `kyma-dub talk.mov --to es` | a Spanish dub |
-| `kyma-dub talk.mov --bilingual --burn` | captions burned in: target on top, the original below |
-| `kyma-dub subs talk.mov --to en` | a translated `.srt` / `.vtt` subtitle file |
-| `kyma-dub recommend --for "young female, TikTok"` | a voice (and model) matched to your audience |
-
-## How it works
-
-```
-video ─▶ extract audio (ffmpeg)
-      ─▶ transcribe + word timing (Whisper)
-      ─▶ group into chunks at natural speech pauses
-      ─▶ translate each chunk, fitted to its seconds (LLM)
-      ─▶ speak each chunk in a locked voice (TTS)
-      ─▶ speed each clip ONLY up to fit its slot, reassemble on the timeline
-      ─▶ mux the new audio back over the original video
-```
-
-Two ideas keep it in sync and natural:
-
-1. **Per-chunk timestamp anchoring** — it never translates one long block and reads it straight (that drifts further off with every sentence). Each chunk is voiced and placed back at its original timestamp.
-2. **Speed-up-only isochrony** — a chunk is only ever sped up to fit its slot (capped by `--max-speed`), **never slowed**, because slowing drags the audio and feels delayed. Leftover time becomes a natural pause. The translation length is budgeted per chunk from a per-language characters-per-second model, so the timing holds across dense scripts (CJK/Thai) and verbose ones (Latin) alike.
-
-## Why this exists
-
-Dubbing a video usually means a subscription product, an upload, and trusting a black box with your footage — and the polished ones still hallucinate, smoothing a mis-heard word into a confident wrong fact (turning a plain "university" into "Stanford," or a vague location into a city that was never said). For a clip about *you*, that's not a rough edge; it's a lie in your voice.
-
-kyma-dub is one local command instead. **Faithfulness is the first rule** — unclear audio stays generic, it never guesses a proper noun, and it translates only what's there. It runs the whole pipeline on a **single Kyma key** (transcribe, translate, and voice), so there's no provider juggling. And it's **open source**, so you can read exactly what it does to your words before you publish them. The voice *and* the captions come out of the same command — not an editor.
-
-## Install
+**Yêu cầu:** Python 3.10+, `ffmpeg`, và Chromium (cho Recut).
 
 ```bash
-curl -fsSL https://github.com/sonpiaz/kyma-dub/releases/latest/download/install.sh | bash
+git clone https://github.com/mp1391004/penny-edit-video.git
+cd penny-edit-video
+
+pip install -r requirements.txt
+playwright install chromium      # chỉ 1 lần, cho Recut
+
+# ffmpeg (nếu chưa có):  macOS: brew install ffmpeg  ·  Ubuntu: sudo apt install ffmpeg
 ```
 
-Then set one key:
+## 2. Chèn API key (bắt buộc)
 
 ```bash
-# ~/.config/kyma-dub/env  (created by the installer)
-KYMA_API_KEY=kyma-xxxxxxxx        # transcribe + translate + voice
-# ELEVENLABS_API_KEY=xi-xxxxxxxx  # optional: direct voice path / deep fallback
+cp .env.example .env
 ```
 
-Get a Kyma key at [kymaapi.com](https://kymaapi.com) — 60 seconds, no card, free credit at signup.
+Mở `.env` và điền:
 
-**Dependencies:** `ffmpeg`, `ffprobe`, `curl`, `python3` (`brew install ffmpeg`).
+| Key | Bắt buộc cho | Lấy ở đâu |
+|---|---|---|
+| `GROQ_API_KEY` | **Recut** (bóc transcript + AI thiết kế) | [console.groq.com/keys](https://console.groq.com/keys) — **miễn phí** |
+| `KYMA_API_KEY` | **Dub** (dịch + lồng tiếng) | [kymaapi.com](https://kymaapi.com?aff=offer) — có credit miễn phí |
+| `ELEVENLABS_API_KEY` | tuỳ chọn (voice-clone cho Dub) | [elevenlabs.io](https://try.elevenlabs.io/r3v0yleue0l0) |
 
-## Dub
+> 💡 Chỉ dùng Recut → chỉ cần `GROQ_API_KEY`. Chỉ dùng Dub → chỉ cần `KYMA_API_KEY`.
+> File `.env` đã bị `.gitignore` chặn — key của bạn **không bao giờ** bị đẩy lên GitHub.
+
+## 3. Chạy
 
 ```bash
-kyma-dub <video> [options]
-
-  --from <lang>            source language code (default: auto-detect)
-  --to <lang>              target language code (default: en)
-  --voice <name|id>        charlie | will | liam | brian | rachel | adam | jessica
-                           or any voice id from `kyma-dub voices` (default: charlie)
-  --tts <engine>           kyma (default — one key) | elevenlabs (direct)
-  --model <id>             translation model (default: qwen-3.7-max)
-  --max-speed <n>          max voice speed-up to fit a slot (default: 1.5)
-  --chunk-sec <n>          max seconds per dub chunk (default: 22)
-  --allow-voice-fallback   permit an independent voice if every primary path is down
-  --srt                    also write a .srt timed to the dubbed audio
-  --bilingual              bilingual captions: target on top, cleaned source below
-  --burn                   burn the captions into the output video
-  --out <path>             output file
-  --keep-temp              keep intermediate files
-  --version / -h
+./start.sh          # hoặc: python3 web_ui_v2.py
 ```
 
-## Subtitles & bilingual captions
+- **Trang chủ:** http://localhost:7861 → chọn Dub hoặc Recut
+- Dub: http://localhost:7861/dub · Recut: http://localhost:7861/recut
 
-Generate translated subtitles without changing the audio, or burn bilingual captions into the video:
+Tắt: `./stop.sh`
 
-```bash
-kyma-dub subs talk.mov --to en --format both   # talk.en.srt + talk.en.vtt
-kyma-dub talk.mov --srt                        # dub + a .srt timed to the dubbed audio
-kyma-dub talk.mov --bilingual --burn           # dub + burned captions: target on top, original below
-kyma-dub subs talk.mov --bilingual --burn      # bilingual captions on a non-dubbed video
-```
+---
 
-**Bilingual** captions put the target language on top and a tidied-up version of the original below (smaller and dimmer), one line each, inside a centred band that clears a corner webcam. The original line is cleaned by AI (recognition junk removed, light punctuation) but never changed in meaning.
+## 4. Penny Dub
 
-Burning needs a libass-enabled ffmpeg. Homebrew's ffmpeg ships without it, so run **`kyma-dub setup-ffmpeg`** once — it drops a static libass ffmpeg into `~/.kyma-dub/bin/` and never touches your system ffmpeg. Without it, `--burn` falls back to writing the subtitle file, so nothing breaks.
+1. Upload video → chọn ngôn ngữ đích + giọng đọc
+2. (tuỳ chọn) bật voice-clone, phụ đề
+3. Submit → nhận video đã lồng tiếng
 
-## Discover
+## 5. Penny Recut (workflow 3 bước có duyệt)
 
-Models and voices on Kyma change over time, so kyma-dub reads them **live** — you (or an agent driving it) always pick from what's current and matched to the audience:
+1. **Upload** → tự bóc transcript
+2. **Transcript** → sửa lỗi chữ (hoặc bấm "✨ AI sửa"), rồi "Tiếp: Lên khung"
+3. **Storyboard** → AI đã tự chọn template cho từng câu; xem **wireframe preview**, sửa nếu muốn (đổi template, chữ, icon, thêm/xoá mục, tách/xoá câu). Tick/bỏ caption.
+4. **Gen video** → render (~4–5 phút cho video 2 phút)
 
-```bash
-kyma-dub models                                  # translation models on Kyma now
-kyma-dub voices --gender female --age young --use-case social_media
-kyma-dub voices --library --lang es              # search the shared voice library
-kyma-dub preview <voice|id> ["sample text"]      # hear a voice before committing
-kyma-dub recommend --for "energetic, for TikTok" --smart
-kyma-dub whatsnew                                # what Kyma added since last check
-```
+**7 template minh hoạ** (AI tự chọn theo nội dung câu, trắng-xanh sạch):
+Khái niệm · Tối giản · Liệt kê · Sơ đồ luồng · Slide · Con số · So sánh.
 
-Filter voices by `gender`, `age`, `accent`, `use-case`, `descriptive`, `language`. `--smart` lets a model pick from a free-text description.
+---
 
-## Routing & fallback
+## 6. Chạy online 24/7 — deploy VPS (tuỳ chọn)
 
-By default the whole pipeline runs on **one Kyma key**. The voice engine is locked once at job start so it never changes mid-video, with a fallback chain underneath: if the primary voice path is unavailable, it falls back through equivalent paths that **preserve the voice**, and only swaps to an independent voice as a last resort — and only when you opt in with `--allow-voice-fallback`, because a tool should never silently change how you sound. Pass `--tts elevenlabs` to voice straight from ElevenLabs (one less hop; needs `ELEVENLABS_API_KEY`).
+Muốn Penny chạy liên tục và có link riêng để chia sẻ / dùng mọi nơi, thuê một VPS nhỏ:
 
-## Desktop (MCP)
+1. **VPS** — cài Ubuntu rồi làm lại bước [Cài đặt](#1-cài-đặt). Gói KVM 1–2 CPU là đủ; render nhanh hơn nếu nhiều CPU. Mình dùng [Hostinger VPS](https://hostinger.com/PENNYDEAL10).
+2. **Domain** — mua tên miền rồi trỏ về IP VPS (Hostinger có sẵn cả domain).
+3. Chạy `./start.sh`, mở cổng `7861` — hoặc đặt **Nginx reverse proxy + HTTPS** để có `https://tênban.com`.
 
-Drive kyma-dub from Claude desktop, Cursor, or ChatGPT desktop via the published MCP server [`@sonpiaz/kyma-dub-mcp`](https://www.npmjs.com/package/@sonpiaz/kyma-dub-mcp) — job-based dubbing plus live `list_models` / `list_voices` / `recommend_voice` / `preview_voice` / `whatsnew` tools and `kyma-dub://models` + `kyma-dub://voices` resources.
+> 💡 Mình xài [Hostinger](https://hostinger.com/PENNYDEAL10) cho cả VPS + domain — mã `PENNYDEAL10` giảm thêm.
 
-```json
-{
-  "mcpServers": {
-    "kyma-dub": {
-      "command": "npx",
-      "args": ["-y", "@sonpiaz/kyma-dub-mcp"],
-      "env": {
-        "KYMA_API_KEY": "kyma-xxxxxxxx",
-        "KYMA_DUB_BIN": "/Users/you/.local/bin/kyma-dub"
-      }
-    }
-  }
-}
-```
+## 7. Chèn link affiliate (kiếm tiền)
 
-> The MCP server shells out to the `kyma-dub` CLI, so install the CLI first. Desktop apps spawn with a minimal `PATH`, so set **`KYMA_DUB_BIN`** to the absolute CLI path (`which kyma-dub`). See [mcp-server/README.md](mcp-server/README.md).
+Video render là file MP4 (người xem không click trực tiếp), nên affiliate hoạt động thế này —
 
-## Notes & limits
+**Cần chuẩn bị:**
+1. **Tài khoản chương trình affiliate** của công cụ bạn nhắc trong video → nhận **link tracking** riêng.
+2. **Link rút gọn / tên miền thương hiệu** (Bitly, Dub.co, hoặc `go.tênban.com`) để hiện link ngắn dễ đọc trên màn hình.
+3. (tuỳ chọn) **QR code** cho link đó.
 
-- Best for narration, presentation, and b-roll. It replaces the audio — there's **no lip-sync**, so for tight talking-head shots the mouth won't match the new language.
-- Background music is replaced along with the speech (source-separation to keep the music bed isn't in yet).
+**Cách chèn:**
+- **Trong video:** thêm 1 câu CTA cuối → ở Storyboard chọn template **Slide** / **Tối giản**, điền link ngắn (vd `go.penny.vn/notebooklm`). Có thể **✂ Tách** thêm 1 beat CTA ở cuối.
+- **Mô tả bài đăng** (YouTube/TikTok/Facebook): dán link affiliate đầy đủ — đây là nơi click chính.
+- **Ghim comment / bio.**
 
-## License
+> Penny Studio hiện chưa tự chèn link affiliate. Có thể thêm **template CTA (ô nhập link + QR)** vào Storyboard nếu cần.
 
-MIT © Son Piaz
+---
+
+## Ghi chú
+- Recut render per-frame qua Chromium (GSAP) → chất lượng cao, mất vài phút. Máy khoẻ → nhanh hơn.
+- Không commit `.env` hay file media (đã có trong `.gitignore`).
+- License: MIT.
