@@ -84,15 +84,38 @@ def extract_audio(video, workdir):
 
 
 # ── 2. transcribe with timestamps ───────────────────────────────────
-def transcribe(cfg, audio):
+MAX_AUDIO_BYTES = 24 * 1024 * 1024  # 24MB — stay under Groq's 25MB limit
+
+def _split_audio(audio, workdir):
+    """Split audio into chunks under MAX_AUDIO_BYTES. Returns list of (file, offset_sec)."""
+    size = os.path.getsize(audio)
+    if size <= MAX_AUDIO_BYTES:
+        return [(audio, 0.0)]
+    total_dur = ffprobe_dur(audio)
+    n_parts = int(size / MAX_AUDIO_BYTES) + 1
+    chunk_dur = total_dur / n_parts
+    parts = []
+    for i in range(n_parts):
+        start = i * chunk_dur
+        out = os.path.join(workdir, f"audio_part_{i}.mp3")
+        ff(["-i", audio, "-ss", f"{start:.2f}", "-t", f"{chunk_dur:.2f}",
+            "-ac", "1", "-ar", "16000", "-b:a", "64k", out])
+        if os.path.exists(out) and os.path.getsize(out) > 1000:
+            parts.append((out, start))
+    log(f"split audio ({size/1048576:.1f}MB) into {len(parts)} parts for transcription")
+    return parts
+
+def _transcribe_one(cfg, audio):
     if cfg["mode"] == "kyma":
         endpoint = cfg["kyma_base"] + "/v1/audio/transcriptions"
         auth = "Bearer " + cfg["kyma_key"]; model = "whisper-v3-turbo"
     else:
         endpoint = "https://api.groq.com/openai/v1/audio/transcriptions"
         auth = "Bearer " + cfg["groq_key"]; model = "whisper-large-v3"
-    # curl handles multipart + the explicit MIME type Kyma requires.
-    args = ["curl", "-sS", "-X", "POST", "-H", "Authorization: " + auth,
+    args = ["curl", "-sS", "-X", "POST",
+            "--connect-timeout", "30", "--max-time", "300",
+            "--retry", "4", "--retry-delay", "3", "--retry-all-errors",
+            "-H", "Authorization: " + auth,
             "-H", "User-Agent: " + cfg["ua"],
             "-F", f"file=@{audio};type=audio/mpeg",
             "-F", "model=" + model, "-F", "response_format=verbose_json"]
@@ -100,10 +123,27 @@ def transcribe(cfg, audio):
         args += ["-F", "language=" + cfg["source_lang"]]
     args += [endpoint]
     out = subprocess.check_output(args)
-    d = json.loads(out)
-    if "segments" not in d or not d["segments"]:
-        die("transcription returned no segments: " + out.decode()[:200])
-    return d["segments"], d.get("language", cfg.get("source_lang", "?"))
+    if not out.strip():
+        raise RuntimeError("transcription API returned empty response (network/timeout)")
+    return json.loads(out)
+
+def transcribe(cfg, audio):
+    workdir = os.path.dirname(audio)
+    parts = _split_audio(audio, workdir)
+    all_segs = []
+    lang = cfg.get("source_lang", "?")
+    for part_file, offset in parts:
+        d = _transcribe_one(cfg, part_file)
+        if "segments" in d and d["segments"]:
+            for s in d["segments"]:
+                s["start"] = float(s["start"]) + offset
+                s["end"] = float(s["end"]) + offset
+            all_segs.extend(d["segments"])
+        if lang == "?" or lang == "auto":
+            lang = d.get("language", lang)
+    if not all_segs:
+        die("transcription returned no segments")
+    return all_segs, lang
 
 
 # ── 3. chunk by natural speech pauses ───────────────────────────────
@@ -409,18 +449,27 @@ def _split_lines(text, max_chars=84):
                 out.append(cur)
     return out or [text]
 
-def build_dub_subcues(chunks):
+def build_dub_subcues(chunks, dual=False):
     """Split each chunk's translated text into subtitle lines, timed across
-    the chunk's PLACED window [pos, pos+spoken] — so subs match the dub."""
+    the chunk's PLACED window [pos, pos+spoken] — so subs match the dub.
+    If dual=True, add original text (vi) below the translated text (en)."""
     cues = []
     for c in chunks:
         pos = c.get("pos", c["start"]); dur = max(0.3, c.get("spoken", c["dur"]))
-        parts = _split_lines(c["en"])
-        total = sum(len(p) for p in parts) or 1
+        en_parts = _split_lines(c["en"])
+        vi_parts = _split_lines(c.get("vi", "")) if dual else []
+        total = sum(len(p) for p in en_parts) or 1
         t = pos
-        for p in parts:
+        for i, p in enumerate(en_parts):
             d = dur * len(p) / total
-            cues.append({"start": t, "end": t + d, "text": p})
+            if dual and vi_parts:
+                # pick matching vi part (distribute evenly)
+                vi_idx = min(i, len(vi_parts) - 1)
+                vi_text = vi_parts[vi_idx] if i < len(vi_parts) else ""
+                text = f"{p}\n{vi_text}" if vi_text else p
+            else:
+                text = p
+            cues.append({"start": t, "end": t + d, "text": text})
             t += d
     return cues
 
@@ -512,6 +561,9 @@ def main():
             die("no speech chunks to dub")
         log(f"grouped into {len(chunks)} chunks")
         chunks = translate(cfg, chunks)
+        if cfg.get("chunks_out"):
+            with open(cfg["chunks_out"], "w") as _fh:
+                json.dump(chunks, _fh, ensure_ascii=False)
         engine = lock_engine(cfg)
         max_speed = cfg.get("max_speed", DEFAULT_MAX_SPEED)
         for c in chunks:
@@ -539,7 +591,7 @@ def main():
                 mux(video, track, cfg["out"], orig_vol=orig_vol)
                 log(f"bilingual subtitles -> {out_ass}")
         elif cfg.get("burn") or cfg.get("srt"):
-            cues = build_dub_subcues(chunks)
+            cues = build_dub_subcues(chunks, dual=cfg.get("dual_sub", False))
             if cfg.get("srt"):
                 out_srt = os.path.splitext(cfg["out"])[0] + ".srt"
                 write_srt(cues, out_srt); log(f"subtitles -> {out_srt}")
