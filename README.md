@@ -9,8 +9,6 @@
 
 Cả hai chạy trên cùng một web app, cùng một cửa sổ trình duyệt.
 
-> Dự án phát triển từ [kyma-dub CLI](README-kyma-cli.md) (phần lồng tiếng), bổ sung engine **Recut** dựng minh hoạ theo giọng nói.
-
 ---
 
 ## 1. Cài đặt

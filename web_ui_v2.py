@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Kyma Dub Studio v2 — Dubbing (optional) + Voice Clone + HyperFramers + Captions.
+Penny Studio — Dub (lồng tiếng) + Recut (minh hoạ theo giọng nói) + Captions.
 Runs on port 7861 (v1 stays on 7860).
 """
 import os, json, subprocess, threading, uuid, re, sys, tempfile, shutil
@@ -396,7 +396,7 @@ HTML = r"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Kyma Dub Studio v2</title>
+<title>Penny Dub</title>
 <style>
 *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
 :root {
