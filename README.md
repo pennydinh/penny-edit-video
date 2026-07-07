@@ -18,8 +18,8 @@ Cả hai chạy trên cùng một web app, cùng một cửa sổ trình duyệt
 **Yêu cầu:** Python 3.10+, `ffmpeg`, và Chromium (cho Recut).
 
 ```bash
-git clone https://github.com/mp1391004/kyma-dub-studio.git
-cd kyma-dub-studio
+git clone https://github.com/mp1391004/penny-edit-video.git
+cd penny-edit-video
 
 pip install -r requirements.txt
 playwright install chromium      # chỉ 1 lần, cho Recut
@@ -37,9 +37,9 @@ Mở `.env` và điền:
 
 | Key | Bắt buộc cho | Lấy ở đâu |
 |---|---|---|
-| `GROQ_API_KEY` | **Recut** (bóc transcript + AI thiết kế) | https://console.groq.com/keys — **miễn phí** |
-| `KYMA_API_KEY` | **Dub** (dịch + lồng tiếng) | https://kymaapi.com — có credit miễn phí |
-| `ELEVENLABS_API_KEY` | tuỳ chọn (voice-clone cho Dub) | https://elevenlabs.io |
+| `GROQ_API_KEY` | **Recut** (bóc transcript + AI thiết kế) | [console.groq.com/keys](https://console.groq.com/keys) — **miễn phí** |
+| `KYMA_API_KEY` | **Dub** (dịch + lồng tiếng) | [kymaapi.com](https://kymaapi.com?aff=offer) — có credit miễn phí |
+| `ELEVENLABS_API_KEY` | tuỳ chọn (voice-clone cho Dub) | [elevenlabs.io](https://try.elevenlabs.io/r3v0yleue0l0) |
 
 > 💡 Chỉ dùng Recut → chỉ cần `GROQ_API_KEY`. Chỉ dùng Dub → chỉ cần `KYMA_API_KEY`.
 > File `.env` đã bị `.gitignore` chặn — key của bạn **không bao giờ** bị đẩy lên GitHub.
@@ -75,7 +75,17 @@ Khái niệm · Tối giản · Liệt kê · Sơ đồ luồng · Slide · Con 
 
 ---
 
-## 6. Chèn link affiliate (kiếm tiền)
+## 6. Chạy online 24/7 — deploy VPS (tuỳ chọn)
+
+Muốn Penny chạy liên tục và có link riêng để chia sẻ / dùng mọi nơi, thuê một VPS nhỏ:
+
+1. **VPS** — cài Ubuntu rồi làm lại bước [Cài đặt](#1-cài-đặt). Gói KVM 1–2 CPU là đủ; render nhanh hơn nếu nhiều CPU. Mình dùng [Hostinger VPS](https://hostinger.com/PENNYDEAL10).
+2. **Domain** — mua tên miền rồi trỏ về IP VPS (Hostinger có sẵn cả domain).
+3. Chạy `./start.sh`, mở cổng `7861` — hoặc đặt **Nginx reverse proxy + HTTPS** để có `https://tênban.com`.
+
+> 💡 Mình xài [Hostinger](https://hostinger.com/PENNYDEAL10) cho cả VPS + domain — mã `PENNYDEAL10` giảm thêm.
+
+## 7. Chèn link affiliate (kiếm tiền)
 
 Video render là file MP4 (người xem không click trực tiếp), nên affiliate hoạt động thế này —
 
