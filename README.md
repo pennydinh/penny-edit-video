@@ -36,7 +36,7 @@ Mở `.env` và điền:
 | Key | Bắt buộc cho | Lấy ở đâu |
 |---|---|---|
 | `GROQ_API_KEY` | **Recut** (bóc transcript + AI thiết kế) | [console.groq.com/keys](https://console.groq.com/keys) — **miễn phí** |
-| `KYMA_API_KEY` | **Dub** (dịch + lồng tiếng) | [kymaapi.com](https://kymaapi.com?aff=offer) — có credit miễn phí |
+| `KYMA_API_KEY` | **Dub** (dịch + lồng tiếng) | [kymaapi.com](https://kymaapi.com?aff=deal) — có credit miễn phí |
 | `ELEVENLABS_API_KEY` | tuỳ chọn (voice-clone cho Dub) | [elevenlabs.io](https://try.elevenlabs.io/r3v0yleue0l0) |
 
 > 💡 Chỉ dùng Recut → chỉ cần `GROQ_API_KEY`. Chỉ dùng Dub → chỉ cần `KYMA_API_KEY`.

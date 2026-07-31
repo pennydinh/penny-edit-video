@@ -130,7 +130,7 @@ if [[ ! -f "$ENV_FILE" ]]; then
   echo
   printf "\033[36m%s\033[0m\n" "🌊 Kyma — one key runs transcribe + translate + voice"
   echo "   ✓ Free credit at signup; auto-fallback when a provider is down"
-  yellow "Get key (60s, no card): https://kymaapi.com"
+  yellow "Get key (60s, no card): https://kymaapi.com?aff=deal"
   echo "Then edit $ENV_FILE: set KYMA_API_KEY."
 else
   dim "  ($ENV_FILE already exists, leaving untouched)"

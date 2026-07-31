@@ -54,7 +54,7 @@ fi
 kyma_dub_keys_check() {
   if [[ "$KYMA_DUB_MODE" == "none" ]]; then
     echo "[kyma-dub] No API key found." >&2
-    echo "[kyma-dub] Recommended: get a Kyma key at https://kymaapi.com (60s, no card)." >&2
+    echo "[kyma-dub] Recommended: get a Kyma key at https://kymaapi.com?aff=deal (60s, no card)." >&2
     echo "[kyma-dub]   export KYMA_API_KEY=kyma-xxxxxxxx" >&2
     echo "[kyma-dub] One key runs transcribe + translate + voice." >&2
     return 1
